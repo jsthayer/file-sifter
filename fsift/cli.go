@@ -139,7 +139,7 @@ func parseArgs(args []string) error {
 		Section("Pre-analysis filtering:").
 		Option("e prefilter   ", filterOption(&ctx.PreFilterArgs), "=FILTER-EXP; Filter files before indexing").
 		Option("b base-match  ", baseAction, "=GLOB-PAT; Shortcut for --prefilter 'base*=*GLOB-PAT*'").
-		Option("x exclude     ", excludeAction, "=GLOB-PAT; Exclude file system files and/or dir trees by basename glob").
+		Option("x exclude     ", excludeAction, "=GLOB-PAT; Exclude file system files and/or dir trees by path glob").
 		Option("R regular-only", &ctx.RegularOnly, "Only consider regular files while scanning file system").
 		Option("L follow-links", &ctx.FollowLinks, "Follow symbolic links while scanning file system").
 		Option("X xdev        ", &ctx.XDev, "Don't descend directories on different file systems").
