@@ -62,7 +62,7 @@ func Test_Context_needsCol(t *testing.T) {
 func Test_Context_analyzeMatches(t *testing.T) {
 	ctx := NewContext()
 	ctx.outputState.errStream = ioutil.Discard
-	ctx.neededCols = map[Column]bool{ColRedundancy: true}
+	ctx.neededCols = map[Column]bool{ColRedundancy: true, ColRedunIdx: true}
 	ctx.Verify = true
 	ctx.KeyCols = ColSelector{cols: []Column{ColPath}}
 	ctx.entries = []fileEntry{
@@ -87,6 +87,13 @@ func Test_Context_analyzeMatches(t *testing.T) {
 	checkVal(t, int64(1), ctx.entries[3][ColRedundancy])
 	checkVal(t, int64(2), ctx.entries[4][ColRedundancy])
 	checkVal(t, int64(2), ctx.entries[5][ColRedundancy])
+
+	checkVal(t, int64(1), ctx.entries[0][ColRedunIdx])
+	checkVal(t, int64(1), ctx.entries[1][ColRedunIdx])
+	checkVal(t, int64(1), ctx.entries[2][ColRedunIdx])
+	checkVal(t, int64(1), ctx.entries[3][ColRedunIdx])
+	checkVal(t, int64(1), ctx.entries[4][ColRedunIdx])
+	checkVal(t, int64(2), ctx.entries[5][ColRedunIdx])
 
 	checkVal(t, ctx.errorMessages[0], "Error: At least one entry on the left was unmatched (--verify was specified)")
 }

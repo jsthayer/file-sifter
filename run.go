@@ -340,7 +340,7 @@ func (self *Context) Run() int {
 	}
 
 	// if calculating matches, go do file matching
-	if self.needsCol(ColMatched) || self.needsCol(ColRedundancy) {
+	if self.needsCol(ColMatched) || self.needsCol(ColRedundancy) || self.needsCol(ColRedunIdx) {
 		self.analyzeMatches()
 	}
 

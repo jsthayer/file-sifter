@@ -8,23 +8,99 @@ fsift - file sifter:
 
 # SYNOPSIS
 
-**fsift** ...
+**fsift** [ *options* ] [ *left-roots*... ] [ **:** *right-roots*... ]
 
 # DESRIPTION
 
-blah
-
-## Subhead
-
-blah
-
 # EXAMPLES
+
+* Scan and print information about the current directory tree:
+
+>    **fsift**
+
+> Example output (can also be saved into an *FSIFT* file):
+
+        | File Sifter output file - V1 |
+        | Command line:
+        | Current working directory: /home/user/projects/file-sifter
+        | Compare keys: path,size,mtime,modestr
+        | Evaluated columns: path,size,mtime,modestr
+        | Run start time: 2017-02-06T15:36:04Z
+        | 
+        | Columns: modestr,size,mtime,path
+        | 
+          -rw-rw-r--  15028  2017-02-06T03:41:10Z  fsift_manpage.html
+          -rw-rw-r--  10476  2017-02-06T03:41:03Z  manpage.md
+          -rw-rw-r--  12383  2017-02-06T03:41:10Z  fsift.1
+          -rw-r--r--  24576  2017-02-06T03:41:07Z  .manpage.md.swp
+          drwxrwxr-x  62463  2017-02-06T03:41:03Z  ./
+        | 
+        | Run end time: 2017-02-06T15:36:04Z
+        | Elapsed time: 254.186µs
+        | 
+        | STATISTICS:  Count   Size
+        |    Scanned:      5  62463
+        |    Indexed:      5  62463
+        |     Output:      5  62463
+
+* Save the information about a directory tree to an *FSIFT* file; add md5sum digests:
+
+>   **fsift /path/to/mydir --md5 --out mydir.FSIFT**
+
+>>   *or*
+
+>   **fsift /path/to/mydir -5omydir.FSIFT**
+
+* Compare the contents of a directory tree to a previously saved *FSIFT* file, showing any differences:
+
+>   **fsift mydir.FSIFT : /path/to/mydir --diff**
+
+* Find which direct child subdirectories are using the most storage:
+
+>   **fsift top/dir --sort size --postfilter filetype=d --postfilter 'depth<2'**
+
+>>   *or*
+
+>   **fsift top/dir -ss -ff=d -fd\\<2**
+
+* Find which git repositories are most in need of garbage collection:
+
+>   **fsift my/projects --prefilter 'path \*=\*\*/.git/objects/' --sort nlinks --columns +nlinks**
+
+>>   *or*
+
+>   **fsift my/projects '-ep\*=\*\*/.git/objects/' -sL -c+L**
+
+* List what kinds of files are in a directory tree:
+
+>   **fsift top/dir --columns extension --key extension --postfilter redunidx=1**
+
+>>   *or*
+
+>   **fsift top/dir -cx -kx -fI=1**
+
+* Assume lists of previously archived files have been saved in a set of *FSIFT*
+files. Before decomissioning a disk, scan it to check against the archives to
+find any files that may need to be added to archives:
+
+>   **fsift archive-index/\*.FSIFT : path/to/disk --membership R --key base,size,mtime,md5**
+
+>>   *or*
+
+>   **fsift archive-index/\*.FSIFT : path/to/disk -mR -kbst5**
+
+* Find all files that have redundant data content:
+
+>   **fsift top/dir --postfilter 'redundancy >1' --key md5 --columns +redundancy --sort size --regular-only**
+
+>>   *or*
+
+>   **fsift top/dir -fr\\>1 -k5 -c+r -Rss**
+
 
 # OVERVIEW
 
 ## Roots
-
-## Character Encodings
 
 # OPTIONS
 
@@ -75,8 +151,8 @@ blah
  ~ Follow symbolic links while scanning the file system. By default, when a
    symbolic link is found, an entry is created about the symbolic link itself.
    When this option is in effect, an entry is created with information about the
-   link *target*. If a symbolic link points to a directory, the program descends
-   into that directory only if this option is in effect.
+   link *target*. If a symbolic link points to a directory, the program will
+   not descend into that directory unless this option is in effect.
 
 **-X**, **--xdev**
  ~ Stay within one file system. If a subdirectory is mount point, don't descend into it.
@@ -150,8 +226,9 @@ blah
 **-Z**, **--out-zone**
  ~ Format output times for given location. The default is UTC. Locations
    can be specified as fixed offsets like "**+06:00**", or as locations
-   recognized by the Go language *time* package, such as "**America/Chicago**".
-   Times are always output in RFC3339 format, such as "**2017-02-03T04:52:13Z**".
+   recognized by the Go language *time* package, such as "**Local**" or
+   "**America/Chicago**".  Times are always output in RFC3339 format, such as
+   "**2017-02-03T04:52:13Z**".
 
 **-v**, **--verbose**
  ~ Increase verbosity.
@@ -222,6 +299,12 @@ COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
 **r    redundancy**
  ~ Count of all files on *this* side matching this file.
 
+**I    redunidx**
+ ~ Ordinal of this file amongst equivalents on *this* side. If a postfilter
+   is set to only select entries where the **redunidx** value is **1**,
+   then only one entry per group of equivalent files will be output
+   on each side, so such a filter can be used to enumerate unique values.
+
 **o    modestr**
  ~ Mode and permission bits as a human readable string, in
    Unix-like format. See the documentation of the Go
@@ -267,6 +350,13 @@ COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
 **5    md5**
  ~ The MD5 digest of this file.
 
-# FSIFT FILES
+# OTHER FEATURES
+
+## FSIFT Files
+
+## Character Encodings
+
+## Summary Statistics
+
 
 ## Windows

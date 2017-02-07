@@ -88,6 +88,7 @@ func (self *Context) analyzeMatches() {
 
 	base := 0 // first entry in list still matching current file
 	needRedun := self.needsCol(ColRedundancy)
+	needRedunIdx := self.needsCol(ColRedunIdx)
 	// scan list looking for matching groups of files
 	for cur := 1; cur < len(entries)+1; cur++ {
 		differs := true
@@ -102,10 +103,14 @@ func (self *Context) analyzeMatches() {
 			leftRedun, rightRedun := 0, 0
 			// compute redundancy counts for each side of this group
 			for i := base; i < cur; i++ {
+				pRedun := &leftRedun
 				if entries[i].getBoolFieldOrFalse(ColSide) {
-					rightRedun++
-				} else {
-					leftRedun++
+					pRedun = &rightRedun
+				}
+				*pRedun++
+				// Update redundancy index col if needed
+				if needRedunIdx {
+					entries[i].setNumericField(ColRedunIdx, int64(*pRedun))
 				}
 			}
 			// if there was at least one file on each side, file is considered to "match"

@@ -39,6 +39,7 @@ const (
 	ColMatched           // true if this file matches any on the other side
 	ColMembership        // matching flags in string format
 	ColRedundancy        // number of matches of this file on this side
+	ColRedunIdx          // the index of this entry within equivalent entries on this side
 	ColModestr           // file type and permissions in unix format
 	ColFileType          // 1-char file type code
 	ColUid               // user ID of file owner
@@ -98,6 +99,7 @@ func init() {
 	defineColumn("M matched   ", ColMatched, "True if this file matches any file from the *other* side")
 	defineColumn("m membership", ColMembership, "Visual representation of 'side' and 'matched' columns")
 	defineColumn("r redundancy", ColRedundancy, "Count of files matching this file on *this* side")
+	defineColumn("I redunidx  ", ColRedunIdx, "Ordinal of this file amongst equivalents on *this* side")
 	defineColumn("3 crc32     ", ColCrc32, "The CRC32 digest of this file")
 	defineColumn("1 sha1      ", ColSha1, "The SHA1 digest of this file")
 	defineColumn("2 sha256    ", ColSha256, "The SHA256 digest of this file")
@@ -123,7 +125,7 @@ func (col Column) String() string {
 // Return true if this column holds a numeric (int64) value
 func (col Column) isNumeric() bool {
 	switch col {
-	case ColDepth, ColSize, ColMstamp, ColDevice, ColRedundancy, ColUid, ColGid, ColNlinks, ColSide, ColMatched:
+	case ColDepth, ColSize, ColMstamp, ColDevice, ColRedundancy, ColRedunIdx, ColUid, ColGid, ColNlinks, ColSide, ColMatched:
 		return true
 	default:
 		return false
@@ -133,7 +135,7 @@ func (col Column) isNumeric() bool {
 // Return true if this column is always computed at analyze time and never parsed or scanned
 func (col Column) isDynamic() bool {
 	switch col {
-	case ColSide, ColMatched, ColRedundancy, ColMembership:
+	case ColSide, ColMatched, ColRedundancy, ColRedunIdx, ColMembership:
 		return true
 	default:
 		return false

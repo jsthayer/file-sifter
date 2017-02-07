@@ -503,7 +503,7 @@ func (self *Context) showHeader() {
 	self.headerOut("Evaluated columns: %s", formatColumnNames(needed))
 	// output start time and the main entry column header
 	self.startTime = time.Now()
-	self.headerOut("Run start time: %v", self.startTime)
+	self.headerOut("Run start time: %v", timeToMtime(self.startTime, self.OutputTimezone))
 	self.headerOut("")
 	self.headerOut("Columns: %s", formatColumnNames(self.OutCols.cols))
 	self.headerOut("")
@@ -540,7 +540,7 @@ func (self *Context) showFooter() {
 	// show run times
 	self.headerOut("")
 	now := time.Now()
-	self.headerOut("Run end time: %v", now)
+	self.headerOut("Run end time: %v", timeToMtime(now, self.OutputTimezone))
 	self.headerOut("Elapsed time: %v", now.Sub(self.startTime))
 	self.headerOut("")
 	// calculate the summary stats and show them

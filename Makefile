@@ -23,3 +23,6 @@ clicover:
 	go test -coverprofile=/tmp/coverage.out -coverpkg ${PACKAGE},${CLI_PACKAGE} ${CLI_PACKAGE}
 	go tool cover -html=/tmp/coverage.out
 
+docs:
+	pandoc -s doc/manpage.md -t man -o doc/fsift.1
+	pandoc -s doc/manpage.md -o doc/fsift_manpage.html
