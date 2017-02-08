@@ -37,7 +37,7 @@ var ctx *sifter.Context
 
 // Version info
 var (
-	ProgName  = "sifter"
+	ProgName  = "File Sifter"
 	Version   string // filled in at link time (see Makefile)
 	BuildDate string // filled in at link time
 	Copyright = "Copyright 2017  John Thayer"
@@ -72,7 +72,8 @@ func excludeAction(arg string) error {
 
 // Show version info.
 func showVersionAndExit() {
-	fmt.Printf("%s version %s (build time: %s)\n", ProgName, Version, BuildDate)
+	fmt.Println()
+	fmt.Printf("%s -- Version %s -- Build date: %s\n", ProgName, Version, BuildDate)
 	fmt.Println(Copyright)
 	fmt.Println("License GPLv2+: GNU GPL version 2 or later.")
 	fmt.Println("This is free software: you are free to change and redistribute it.")

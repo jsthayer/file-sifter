@@ -144,7 +144,7 @@ func NewContext() *Context {
 // If there is an error, return the string unmodified.
 func (self *Context) adjustOutputTimezone(mtime string) (out string) {
 	out = mtime
-	if self.OutputTimezone != nil {
+	if self.OutputTimezone != nil || !strings.HasSuffix(mtime, "Z") {
 		tm, e := mtimeToTime(mtime)
 		if e == nil {
 			out = timeToMtime(tm, self.OutputTimezone)

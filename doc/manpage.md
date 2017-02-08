@@ -2,15 +2,55 @@
 % John Thayer
 % January 2017
 
+<!-- This Markdown file uses pandoc extensions -->
+
 # NAME
 
-fsift - file sifter:
+fsift - File Sifter: Powerful tool to scan, digest, compare and report on files
+in directory trees (or in previously saved reports) 
 
 # SYNOPSIS
 
 **fsift** [ *options* ] [ *left-roots*... ] [ **:** *right-roots*... ]
 
 # DESRIPTION
+
+File Sifter is a utility that has features inspired by the \*NIX utilites
+*find* and *diff*, as well as file digest programs such as *sha256sum*. It can
+be used for a variety of tasks involving the management of large numbers of
+files, such as determining which files may be out-of-date in offsite backups.
+
+# OVERVIEW
+
+File Sifter able to scan filesystems like *find*, but instead of immediately
+printing entries, it loads the information into an internal index.
+
+Once loaded, File Sifter performs analysis on the index. It then optionally
+sorts the entries and prints them out in tabular format, followed by summary
+statistics. This output may be saved to an *FSIFT* file, and entries from that
+file may be loaded during a later run for comparisons or similar analysis.
+
+The non-option arguments given to File Sifter are called *roots*. Roots
+are generally either the top of a directory tree to scan, or a previously
+saved *FSIFT* file. Each root is loaded into one of two *sides* of the index,
+which are called *left* and *right*. During analysis, File Sifter can
+compare the contents of the left and right sides of the index based on
+user-specified criteria, and it can generate output and reports about the
+comparisons.
+
+File entries may be subjected to user-defined filters at two points: before
+loading into the index, or before the final output. These filters allow
+tailoring the analysis to specific requirements.
+
+Each piece of information about a file processed by the program is called a
+*column*.  Columns are defined for the usual file system attributes such as
+path, size and permissions. There are also columns for digests of file data.
+Finally, some columns can by added by the File Sifter program as the result of
+analysis, such as whether the file *matches* at least one other file.
+
+Columns are only computed and stored if they are made necessary by the
+user-specified command line options. For example, the contents of files are
+only read if the user specifies operations on a digest column.
 
 # EXAMPLES
 
@@ -98,11 +138,13 @@ find any files that may need to be added to archives:
 >   **fsift top/dir -fr\\>1 -k5 -c+r -Rss**
 
 
-# OVERVIEW
-
-## Roots
-
 # OPTIONS
+
+**:**
+ ~ A single colon on the command line is a special marker that divides the
+   left-side roots from the right-side roots. If no colon is present, all roots
+   are assigned to the left side. Otherwise, any roots on the command line
+   *after* the colon are assigned to the right side.
 
 # Field selection, comparing and sorting:
 **-c**, **--columns=COLUMNS**
@@ -242,13 +284,17 @@ find any files that may need to be added to archives:
 **-h**, **--help**
  ~ Print a help message and exit.
 
-# FILTER SPECIFICATIONS
-
-## Glob Patterns
-
 # COLUMN CODES
 
-COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
+Each column has a full name and a single-character short name alias.
+
+For options that take a list of columns as an argument, the columns can be
+specified with a comma-separated list of names, long or short. If no commas are
+in the argument and it does not match a long name, then the program tries
+assuming that the argument is a concatenation of short name characters. The
+argument must not contain whitespace.
+
+For example, **size,mtime,path** can be shortened to **stp**.
 
 **p    path**
  ~ The path of this file relative to the given root.
@@ -333,13 +379,15 @@ COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
  ~ The number of hard links to this file.
 
 **3    crc32**
- ~ The CRC32 digest of this file. **Note**: for all digest fields,
-   directories and other nonregular files get an empty string for
-   a digest value (not *null*). This avoids excessive *null* comparison
-   errors when digest fields are compared.
+ ~ The CRC32 checksum of this file. **Note**: for all checksum and digest
+   fields, directories and other nonregular files get an empty string for a value
+   instead of *null*. This avoids excessive *null* comparison errors when these
+   fields are compared. **Important:** The crc32 checksum should not be used for
+   security purposes.
 
 **1    sha1**
- ~ The SHA1 digest of this file.
+ ~ The SHA1 digest of this file. **Important:** The sha1 digest probably
+   should not be used for security purposes.
 
 **2    sha256**
  ~ The SHA256 digest of this file.
@@ -348,7 +396,86 @@ COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
  ~ The SHA512 digest of this file.
 
 **5    md5**
- ~ The MD5 digest of this file.
+ ~ The MD5 digest of this file. **Important:** The md5 digest
+   should not be used for security purposes.
+
+# FILTER SPECIFICATIONS
+
+*Filters* allow the rejection of file entries based on user-defined criteria.
+
+Any column can be used in a filter specification. The general filter syntax is as follows:
+
+<**column-name**><**operator**><**value**>
+
+The column name may be any long or short column identifier. The value is an
+arbitrary string for comparison to an entry's value. There should be no
+whitespace between the operator and the value.
+
+The supported operators are:
+
+**=**
+ ~ Equals
+
+**< <= > >=**
+ ~ Ordered comparisons (numeric or lexicographic, depending on the column type)
+
+**\*=**
+ ~ Glob pattern match (see below).
+
+**~=**
+ ~ Regular expression match. For detailed syntax, see the Go language
+   *regexp* package documentation.
+
+**.isnull**
+ ~ Matches if the value is missing in this file entry
+
+**!= !\*= !~= !.isnull**
+ ~ Negated versions of the above operators
+
+## Combining Filters
+
+Multiple filters of the same type may be specified. In addition to the above filters,
+there are two special combining filters:
+
+**or**
+    Matches if either child filter matches.
+
+**and**
+    Matches if both child filters match.
+
+Combining filters act as binary operators between other filters. They
+are applied in *prefix* order (also known as *normal* Polish notation).
+In other words, a combining filter appears directly in front of its two child filters.
+
+For example, the following set of filters selects all of Jack and Jill's files larger
+than one megabyte:
+
+**-f and -f 'size>1000000' -f or -f user=jack -f user=jill**
+
+If there are any filters of a given type remaining after combining filters have
+been assigned children, then the remaining filters are assigned to implicit
+**and** filters. So for the common case of multiple filters defined
+with no combining filters, they are *and*ed together.
+
+
+## Glob Patterns
+
+Glob patterns are similar to glob expansion in shell interpreters: "__?__" matches any
+single character except "__/__". "__\*__" matches any number of non-"__/__" characters.
+In this implementation, the contents of brackets **\[**...**\]** are fed directly
+to the underlying regular expression evaluator; the result is similar to many
+glob implementations, but there are some differences. See the Go langauge *regexp*
+package documentation for details.
+
+As a special case, a __\*\*__ matches any number of characters, *including*
+"__/__".  This can be used to match entire segments of file paths. For example,
+the filter: __path\*=\*\*/.config/\*\*__ will select all files under *.config*
+directories below the top level.
+
+When using the __\*\*__ operator, note that directory paths are always stored
+with a trailing "__/__" character.  Also note that files directly under the
+root will not have a "__/__" preceding them. If this creates problems with glob
+matching entire paths, a regular expression pattern may be a more flexible alternative.
 
 # OTHER FEATURES
 
@@ -358,5 +485,24 @@ COLUMNS codes (example: 'size,time,path' can be shortened to 'stp'):
 
 ## Summary Statistics
 
+## Platform Specific Differences
 
-## Windows
+## Interactive Status Output
+
+# HISTORY
+
+File Sifter is the result of a long evolution of personal utilities that I
+wrote over the last 20-odd years to help keep track of files from various
+computer systems.
+
+The first utilities were simple Perl scripts that did a simple scan/sort/diff
+on directories. Eventually, I wrote an implementation in C++ that used Sqlite
+for an internal engine and was largely a superset of the current
+implementation. However, it was hard to use the advanced features of that
+version, and although I found it very useful and used it for many years, I
+was never very happy with it.
+
+I recently decided to pare down the program to its most useful features, clean
+up the user interface, drop the embedded database, and port it to Go. The
+result of that effort is this rendition of File Sifter.
+
