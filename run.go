@@ -39,8 +39,9 @@ var unitTest = false
 
 // Holds a list of columns and the default list
 type ColSelector struct {
-	cols    []Column // the list of columns to use for processing
-	defauls []Column // the default list to use when no command line option given
+	cols         []Column // the list of columns to use for processing
+	defauls      []Column // the default list to use when no command line option given
+	allowInverse bool     // true to allow specifiying inverse columns with '/'
 }
 
 // Context is the main object that holds the state of a running instance of
@@ -121,6 +122,7 @@ func NewContext() *Context {
 	}
 	ctx.OutCols.defauls = []Column{ColModestr, ColSize, ColMtime, ColPath}
 	ctx.KeyCols.defauls = []Column{ColPath, ColSize, ColMtime, ColModestr}
+	ctx.SortCols.allowInverse = true
 	ctx.neededCols = map[Column]bool{}
 	ctx.outputState.stream = os.Stdout
 	ctx.outputState.errStream = os.Stderr
@@ -201,7 +203,7 @@ func (self *Context) UpdateColumnsCmdlineArg(colSel *ColSelector, posn int, arg 
 		arg = arg[1:]
 	}
 	// parse the list of columns
-	cols, err := ParseColumnsList(arg)
+	cols, err := ParseColumnsList(arg, colSel.allowInverse)
 	if err == nil {
 		if appending {
 			if colSel.cols == nil {

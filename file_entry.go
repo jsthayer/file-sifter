@@ -19,6 +19,7 @@
 package sifter
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -228,6 +229,8 @@ func (self fileEntry) getNumericFieldOrZero(col Column) int64 {
 func (self fileEntry) compare(that fileEntry, columns []Column) (int, bool) {
 	gotNull := false
 	for _, col := range columns {
+		inverse := col&ColInvertFlag != 0
+		col &^= ColInvertFlag
 		diff := 0
 		var ok1, ok2 bool
 		if col.isNumeric() {
@@ -245,6 +248,9 @@ func (self fileEntry) compare(that fileEntry, columns []Column) (int, bool) {
 			v1, ok1 = self.getStringField(col)
 			v2, ok2 = that.getStringField(col)
 			diff = strings.Compare(v1, v2)
+		}
+		if inverse {
+			diff = -diff
 		}
 		switch {
 		case ok1 && ok2 && diff != 0:
@@ -265,7 +271,7 @@ var unescapePat = regexp.MustCompile(`\\(.)`)
 
 // Remove escapes from a FSIFT file field for parsing. The boolean
 // returned is true unless the field was an encoded null value.
-func unescapeField(val string, lastCol bool) (out string, notNull bool) {
+func unescapeField(val string) (out string, notNull bool) {
 	notNull = true
 	switch {
 	case strings.IndexByte(val, '\\') < 0:
@@ -276,12 +282,12 @@ func unescapeField(val string, lastCol bool) (out string, notNull bool) {
 	case val == `\~`:
 		// NULL value
 		notNull = false
-	case lastCol:
-		// last column gets no escapes other than above two
-		out = val
 	default:
 		// remove remaining escape backslashes
-		out = unescapePat.ReplaceAllString(val, "$1")
+		val = strings.Replace(val, `\n`, "\n", -1)
+		val = strings.Replace(val, `\r`, "\r", -1)
+		val = strings.Replace(val, `\ `, " ", -1)
+		out = strings.Replace(val, `\\`, `\`, -1)
 	}
 	return
 }
@@ -294,11 +300,43 @@ func escapeField(text string, notNull, lastCol bool) string {
 		return `\~` // null value
 	case text == "":
 		return `\-` // empty value
-	case lastCol:
-		return strings.Replace(text, `\`, `\\`, -1) // just escape backslashes
+	case strings.IndexAny(text, " \n\r\\") < 0:
+		return text // nothing to escape
 	default:
-		text = strings.Replace(text, `\`, `\\`, -1) // escape backslashes and spaces
-		return strings.Replace(text, ` `, `\ `, -1)
+		// look for corner case of spaces at ends of string, which are always escaped
+		notspace := func(r rune) bool { return r != ' ' }
+		left := strings.IndexFunc(text, notspace)
+		right := strings.LastIndexFunc(text, notspace) + 1
+		if left < 0 {
+			// field is all spaces
+			left = len(text)
+			right = 0
+			text = ""
+		} else {
+			// trim end spaces from field
+			length := len(text)
+			text = text[left:right]
+			right = length - right
+		}
+
+		// escape chars as needed
+		buf := bytes.Buffer{}
+		for _, rune := range text {
+			switch {
+			case rune == '\n':
+				buf.WriteString(`\n`)
+			case rune == '\r':
+				buf.WriteString(`\r`)
+			case rune == '\\':
+				buf.WriteString(`\\`)
+			case rune == ' ' && !lastCol:
+				buf.WriteString(`\ `) // interior spaces are only escaped if not last col
+			default:
+				buf.WriteRune(rune)
+			}
+		}
+		// return result and any escaped spaces at ends
+		return strings.Repeat(`\ `, left) + buf.String() + strings.Repeat(`\ `, right)
 	}
 }
 

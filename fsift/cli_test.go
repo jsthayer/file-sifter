@@ -190,10 +190,10 @@ var regular1 = `| File Sifter output file - V1 |
 | Compare keys: path,size,mtime,modestr
 | Evaluated columns: path,size,mtime,modestr
 | Columns: modestr,size,mtime,path
-  -rw-rw-r--  1  2016-11-24T15:06:42Z  x/a
-  -rw-rw-r--  3  2016-11-24T15:06:43Z  x/c
-  -rw-rw-r--  2  2016-11-24T15:06:45Z  y/b
   -rw-rw-r--  3  2016-11-24T15:06:46Z  y/c
+  -rw-rw-r--  2  2016-11-24T15:06:45Z  y/b
+  -rw-rw-r--  3  2016-11-24T15:06:43Z  x/c
+  -rw-rw-r--  1  2016-11-24T15:06:42Z  x/a
 | STATISTICS:  Count  Size
 |    Scanned:      4     9
 |    Indexed:      4     9
@@ -372,8 +372,8 @@ var tests = []test{
 		"exclude b", []string{"$T/1", "-xx", "-b[bd]"}, true, exclude1, 0,
 	},
 	{
-		// test regular-only option
-		"regular only", []string{"$T/1", "-R", "-sp"}, false, regular1, 0,
+		// test regular-only option and inverse sort
+		"regular only", []string{"$T/1", "-R", "-s/p"}, false, regular1, 0,
 	},
 	{
 		// check with symlink, not following links
@@ -466,11 +466,11 @@ func newAnalyzer(t *testing.T, text io.Reader) *analyzer {
 			case "| STATISTICS":
 				stats = true
 			case "| Columns":
-				self.outCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "))
+				self.outCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "), false)
 			case "| Evaluated columns":
-				self.evalCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "))
+				self.evalCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "), false)
 			case "| Compare keys":
-				self.keyCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "))
+				self.keyCols, err = sifter.ParseColumnsList(strings.Trim(parts[1], " "), false)
 			}
 		}
 		if err != nil {

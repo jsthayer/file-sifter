@@ -48,12 +48,13 @@ func Test_Context_loadSifterFile(t *testing.T) {
   bad path2`, false,
 			[]fileEntry{
 				{ColSize: int64(123), ColPath: "path"},
-				{ColSize: int64(456)},
+				{},
 				{ColPath: `path3`},
 				{ColSize: int64(789), ColPath: ""},
 			},
 			"",
-			[]string{`Error: Parse error in FSIFT file: strconv.ParseInt: parsing "bad": invalid syntax`}},
+			[]string{`Error: Could not find delimiter in FSIFT file`,
+				`Error: Parse error in FSIFT file: strconv.ParseInt: parsing "bad": invalid syntax`}},
 		{
 			`| Columns: path,size
   pa\ t\\h 123

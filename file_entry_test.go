@@ -217,6 +217,9 @@ func Test_fileEntry_compare(t *testing.T) {
 		{f2, f1, []Column{ColPath}, 1, true},
 		{f1, f2, []Column{ColPath}, -1, true},
 		{f1, f1, []Column{ColPath}, 0, true},
+		{f2, f1, []Column{ColPath | ColInvertFlag}, -1, true},
+		{f1, f2, []Column{ColPath | ColInvertFlag}, 1, true},
+		{f1, f1, []Column{ColPath | ColInvertFlag}, 0, true},
 		{f2, f1, []Column{ColSize}, 1, true},
 		{f1, f2, []Column{ColSize}, -1, true},
 		{f1, f3, []Column{ColSize}, 0, true},
@@ -239,25 +242,22 @@ func Test_unescapeField(t *testing.T) {
 		bool
 	}
 	var tests = []struct {
-		input    string
-		want     stringBool
-		wantLast stringBool
+		input string
+		want  stringBool
 	}{
-		{"abc", stringBool{"abc", true}, stringBool{"abc", true}},               // no escapes
-		{`\~`, stringBool{"", false}, stringBool{"", false}},                    // null
-		{`\-`, stringBool{"", true}, stringBool{"", true}},                      // empty
-		{`a\ b`, stringBool{"a b", true}, stringBool{`a\ b`, true}},             // space
-		{`a\\b`, stringBool{`a\b`, true}, stringBool{`a\\b`, true}},             // backslash
-		{`\~x`, stringBool{`~x`, true}, stringBool{`\~x`, true}},                // tilde (not really used)
-		{`\ab\c\d\\`, stringBool{`abcd\`, true}, stringBool{`\ab\c\d\\`, true}}, // multi
+		{"abc", stringBool{"abc", true}},                  // no escapes
+		{`\~`, stringBool{"", false}},                     // null
+		{`\-`, stringBool{"", true}},                      // empty
+		{`a\ b`, stringBool{"a b", true}},                 // space
+		{`a\\b`, stringBool{`a\b`, true}},                 // backslash
+		{`a\nb`, stringBool{"a\nb", true}},                // newline
+		{`a\rb`, stringBool{"a\rb", true}},                // cr
+		{` ab\\\n\rc\ `, stringBool{" ab\\\n\rc ", true}}, // multi
 	}
 	for _, test := range tests {
-		val, notNull := unescapeField(test.input, false)
+		val, notNull := unescapeField(test.input)
 		got := stringBool{val, notNull}
 		checkVal(t, test.want, got)
-		val, notNull = unescapeField(test.input, true)
-		got = stringBool{val, notNull}
-		checkVal(t, test.wantLast, got)
 	}
 }
 
@@ -274,9 +274,13 @@ func Test_escapeField(t *testing.T) {
 		{"", false, true, `\~`},                // null last
 		{"abc", true, false, "abc"},            // normal
 		{`a\b`, true, false, `a\\b`},           // backslash
+		{"a\nb", true, false, `a\nb`},          // newline
+		{"a\rb", true, false, `a\rb`},          // cr
 		{`a\b`, true, true, `a\\b`},            // backslash last
 		{`a b`, true, false, `a\ b`},           // space
 		{`a b`, true, true, `a b`},             // space last
+		{` a b `, true, false, `\ a\ b\ `},     // space ends
+		{` a b `, true, true, `\ a b\ `},       // space ends last
 		{`a b\cd `, true, false, `a\ b\\cd\ `}, // multi
 	}
 	for _, test := range tests {

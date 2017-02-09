@@ -51,21 +51,25 @@ func Test_isNumeric_isDynamic(t *testing.T) {
 
 func Test_parseColumnList(t *testing.T) {
 	var tests = []struct {
-		arg       string
-		expect    []Column
-		expectErr string
+		arg          string
+		expect       []Column
+		expectErr    string
+		allowInverse bool
 	}{
-		{"", []Column{}, ""},                                          // empty
-		{"p", []Column{ColPath}, ""},                                  // single short
-		{"stp", []Column{ColSize, ColMtime, ColPath}, ""},             // multi short
-		{"path", []Column{ColPath}, ""},                               // single long
-		{"size,mtime,path", []Column{ColSize, ColMtime, ColPath}, ""}, // multi long
-		{"z", nil, "Bad column name"},                                 // bad short
-		{"fooz", nil, "Bad column name"},                              // bad long
-		{"path,foo", nil, "Bad column name"},                          // bad long multi
+		{"", []Column{}, "", false},                                                    // empty
+		{"p", []Column{ColPath}, "", false},                                            // single short
+		{"stp", []Column{ColSize, ColMtime, ColPath}, "", false},                       // multi short
+		{"path", []Column{ColPath}, "", false},                                         // single long
+		{"size,mtime,path", []Column{ColSize, ColMtime, ColPath}, "", false},           // multi long
+		{"z", nil, "Bad column name", false},                                           // bad short
+		{"fooz", nil, "Bad column name", false},                                        // bad long
+		{"path,foo", nil, "Bad column name", false},                                    // bad long multi
+		{"/path,foo", nil, "This columns list may not contain inverse", false},         // bad long multi
+		{"/path,size", []Column{ColPath | ColInvertFlag, ColSize}, "", true},           // inverse
+		{"/p/s", []Column{ColPath | ColInvertFlag, ColSize | ColInvertFlag}, "", true}, // inverse
 	}
 	for _, test := range tests {
-		cols, err := ParseColumnsList(test.arg)
+		cols, err := ParseColumnsList(test.arg, test.allowInverse)
 		checkValErr1(t, test.expect, cols, test.expectErr, err)
 	}
 }

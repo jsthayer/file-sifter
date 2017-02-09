@@ -47,9 +47,8 @@ func (self *Context) loadSifterFile(r io.Reader) error {
 	columns := []Column{}          // columns detected in the file from header directive
 	scanner := bufio.NewScanner(r) // help read file by lines
 	var err error
-	// regex to select fields in a file entry
-	// (escaped-space | escaped-backslash | null | empty-string | other-chars)+
-	pat := regexp.MustCompile(`(?:\\ |\\\\|\\~|\\-|[^\\ ])+`)
+	// regex to select delimiters in entry lines
+	pat := regexp.MustCompile(`[^\\] `)
 
 	// process each line
 	for scanner.Scan() {
@@ -76,16 +75,22 @@ func (self *Context) loadSifterFile(r io.Reader) error {
 
 		// create a new file entry object and fill in its fields
 		entry := newFileEntry()
-		i := 0
-		// scan up to the next-to-last field
-		for ; i < len(columns)-1; i++ {
-			// find the next field or quit
-			ends := pat.FindIndex(line)
-			if ends == nil {
-				break
+		for i := 0; i < len(columns); i++ {
+			// Fields are separated by spaces; remove previous delimiter
+			line = bytes.TrimLeft(line, " ")
+
+			// Look for next delimiter (or end-of-line in last column)
+			end := len(line)
+			if i < len(columns)-1 {
+				ends := pat.FindIndex(line)
+				if ends == nil {
+					self.onError("Could not find delimiter in FSIFT file")
+					break
+				}
+				end = ends[0] + 1
 			}
-			// unescape the field and add it to the file entry
-			field, notNull := unescapeField(string(line[ends[0]:ends[1]]), false)
+			// get field value and add it to the file entry
+			field, notNull := unescapeField(string(line[:end]))
 			if notNull {
 				err = entry.parseAndSetField(self, columns[i], field)
 				if err != nil {
@@ -93,19 +98,9 @@ func (self *Context) loadSifterFile(r io.Reader) error {
 					break
 				}
 			}
-			line = line[ends[1]:]
+			line = line[end:]
 		}
 
-		if err == nil && len(line) > 0 {
-			// scan and enter the last field, which is escaped differently
-			field, notNull := unescapeField(strings.TrimLeft(string(line), " "), true)
-			if notNull {
-				err = entry.parseAndSetField(self, columns[i], field)
-				if err != nil {
-					self.onError("Parse error in FSIFT file: ", err)
-				}
-			}
-		}
 		if err == nil {
 			// add "side" field if needed
 			if self.needsCol(ColSide) {
@@ -405,7 +400,7 @@ func (self *Context) calcDigestFile(col Column, root string, entry fileEntry) {
 	// TODO: if multiple digest cols specified, displayed counts will be off
 	allBytes := self.scanStats.leftSize + self.scanStats.rightSize
 	allFiles := self.scanStats.leftCount + self.scanStats.rightCount
-	self.outTempf(0, "%s(%dMB/%dMB in %d/%d) %s", colNames[col].longName,
+	self.outTempf(0, "%s(%dMB/%dMB in %d/%d) %s", col,
 		self.curByteCount/1000000, allBytes/1000000,
 		self.curFileCount, allFiles, filePath)
 }
@@ -494,6 +489,9 @@ func (self *Context) showHeader() {
 	cwd, _ := os.Getwd()
 	self.headerOut("Current working directory: %s", cwd)
 	self.headerOut("Compare keys: %s", formatColumnNames(self.KeyCols.cols))
+	if len(self.SortCols.cols) > 0 {
+		self.headerOut("Sort keys: %s", formatColumnNames(self.SortCols.cols))
+	}
 	var needed []Column
 	for col := Column(0); col < ColLAST; col++ {
 		if self.neededCols[col] {

@@ -447,8 +447,8 @@ Combining filters act as binary operators between other filters. They
 are applied in *prefix* order (also known as *normal* Polish notation).
 In other words, a combining filter appears directly in front of its two child filters.
 
-For example, the following set of filters selects all of Jack and Jill's files larger
-than one megabyte:
+For example, the following set of filters selects all the files larger
+than one megabyte that belong to Jack or Jill:
 
 **-f and -f 'size>1000000' -f or -f user=jack -f user=jill**
 
@@ -481,7 +481,61 @@ matching entire paths, a regular expression pattern may be a more flexible alter
 
 ## FSIFT Files
 
+The output of File Sifter may be saved to a file (an extention of **.FSIFT** is
+recommended).  If this file is later specified as a root during another run of
+File Sifter, then by default entries will parsed and loaded from that file.
+
+Note that if the header information or the file entries are suppressed using
+command line options (such as **--summary** or **--plain**), then the output
+will not be useful for loading later.
+
+### Syntax
+
+*FSIFT* files are text files with two kinds of lines: *directive* lines
+and *entry* lines. Directive lines start with a **|** character. 
+
+The file starts with a *directive* line identifying it as an *FSIFT* file. After that
+is a group of informational header directives. The only other directive that
+is relevant to parsing *FSIFT* files is the **Columns** directive. This
+specifies which fields are present in each *entry* line. The **Columns**
+directive must appear before the first *entry* line. All other *directive*
+lines are ignored by the parser.
+
+*Entry* lines follow the header, with one *entry* line per output file entry.
+These lines start with a space, and are followed by one or more fields.
+The number of fields matches the number of names in the **Columns** directive,
+and each item is the field information from the corresponding column name.
+
+After the entries, a footer is output. This contains a set of *directive*
+lines with summary information such as run time, file and byte counts.
+
+In *entry* lines, fields are separated by two space characters.  Certain
+characters within a field are escaped with backslashes: spaces, newlines,
+carraige returns and backslashes.  In addition, there are two special escape
+sequences: **\\-** indicates a zero-length string, and **\\~** indicates a
+missing value (called a *null*).  These escapes are removed when *FSIFT* files
+are parsed.
+
+As a special exception, space characters are *not* escaped in the last column.
+This is possible because the parser knows that no other fields will follow this
+one before the next newline. In the common case where *path* is the last field
+on each line, this makes the output look cleaner when there are spaces in file
+names. (However, even in the last column, any unlikely spaces at the begining
+or end of a field are still escaped.)
+
+When the **--plain0** option is specified, there is no escaping performed, and
+all data is separated by ASCII **NUL** characters. Then the **--json** option
+is specified, the output is escaped according to JSON rules. File Sifter
+does not support later loading from either of these formats.
+
 ## Character Encodings
+
+All characters are processed assuming UTF-8 encoding. File names with
+characters that are not decodable as valid Unicode may produce unexpected
+results. Such characters are likely to pass through to the output unchanged,
+but comparisons and analysis might have problems.  Note that in some cases,
+file systems can be mounted with options that automatically translate
+characters which cannot be converted to Unicode to "safe" substitute sequences.
 
 ## Summary Statistics
 

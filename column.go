@@ -19,6 +19,7 @@
 package sifter
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
@@ -53,6 +54,9 @@ const (
 	ColSha512            // sha512 digest
 	ColMd5               // md5 digest
 	ColLAST              // dummy end marker; must be last
+
+	// Flag for inverse sort
+	ColInvertFlag = 0x1000000
 )
 
 type Column int
@@ -119,7 +123,12 @@ func GetColumnHelp() []string {
 
 // Return the long name of a column
 func (col Column) String() string {
-	return colNames[col].longName
+	inv := ""
+	if col&ColInvertFlag != 0 {
+		inv = "/"
+		col &^= ColInvertFlag
+	}
+	return inv + colNames[col].longName
 }
 
 // Return true if this column holds a numeric (int64) value
@@ -143,26 +152,50 @@ func (col Column) isDynamic() bool {
 }
 
 // Parse an argument that has a comma-separated list of long and/or short
-// column names, return a corresponding slice of column IDs.  If the argument
-// has no commas and it doesn't match a long name, also try assuming each char
-// is an individual short name. If an error occurs, return nil and the error.
-func ParseColumnsList(list string) ([]Column, error) {
+// column names, return a corresponding slice of column IDs. If allowInverse is
+// set, inverse sort columns (prefixed with '/' in the argument) are identified
+// in the returned inverse list, If the argument has no commas and it doesn't match a
+// long name, also try assuming each char is an individual short name. If an
+// error occurs, return nil and the error.
+func ParseColumnsList(list string, allowInverse bool) ([]Column, error) {
 	columns := []Column{}
 	if len(list) == 0 {
 		return columns, nil
 	}
+	if !allowInverse && strings.Contains(list, "/") {
+		return nil, fmt.Errorf("This columns list may not contain inverse markers: %s", list)
+	}
 	if strings.IndexByte(list, ',') < 0 {
-		_, ok := colIndex[list]
+		name := list
+		if strings.HasPrefix(name, "/") {
+			name = name[1:]
+		}
+		_, ok := colIndex[name]
 		if !ok {
 			// no commas and name doesn't match; insert commas between each char
-			list = strings.Replace(list, "", ",", -1)
-			list = list[1 : len(list)-1]
+			buf := bytes.Buffer{}
+			wasSlash := true
+			for _, r := range list {
+				if !wasSlash {
+					buf.WriteRune(',')
+				}
+				buf.WriteRune(r)
+				wasSlash = r == '/'
+			}
+			list = buf.String()
 		}
 	}
 	for _, name := range strings.Split(list, ",") {
+		inv := strings.HasPrefix(name, "/")
+		if inv {
+			name = name[1:]
+		}
 		col, ok := colIndex[name]
 		if !ok {
 			return nil, fmt.Errorf("Bad column name '%s'", name)
+		}
+		if inv {
+			col |= ColInvertFlag
 		}
 		columns = append(columns, col)
 	}
@@ -178,7 +211,7 @@ var columnsDirectivePat = regexp.MustCompile(`^\|\s*Columns:\s+([\w,]+)\s*$`)
 func parseColumnsDirective(line []byte) ([]Column, error) {
 	match := columnsDirectivePat.FindSubmatch(line)
 	if match != nil {
-		return ParseColumnsList(string(match[1]))
+		return ParseColumnsList(string(match[1]), false)
 	} else {
 		return nil, nil
 	}
