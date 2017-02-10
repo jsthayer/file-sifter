@@ -204,8 +204,12 @@ func (self fileEntry) getNumericField(col Column) (int64, bool) {
 				}
 			}
 		case ColDepth:
-			if sval, ok := self[ColPath]; ok {
-				d := int64(strings.Count(sval.(string), "/"))
+			if val, ok := self[ColPath]; ok {
+				sval := val.(string)
+				d := int64(strings.Count(sval, "/"))
+				if strings.HasSuffix(sval, "/") {
+					d--
+				}
 				self.setNumericField(col, d)
 				return d, true
 			}
