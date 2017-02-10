@@ -140,6 +140,13 @@ find any files that may need to be added to archives:
 
 # OPTIONS
 
+Options may be freely intermixed with roots. Most options have both a long
+version and a short version. Short boolean options may be concatenated
+(such as -qS), and short options which take an argument may have the
+argument concatenated to the option. Long options can have the argument
+joined with an "**=**" character. The following are all equivalent:
+**-st**, **-s t**, **-smtime**, **--sort mtime**, **--sort=mtime**, **--sort t**.
+
 **:**
  ~ A single colon on the command line is a special marker that divides the
    left-side roots from the right-side roots. If no colon is present, all roots
@@ -528,6 +535,44 @@ all data is separated by ASCII **NUL** characters. Then the **--json** option
 is specified, the output is escaped according to JSON rules. File Sifter
 does not support later loading from either of these formats.
 
+## Summary Statistics
+
+At the end of the run, a footer is printed by default which summarizes
+the analysis of the files. If both left and right roots were specified,
+it breaks out the statistics by left and right files. It shows
+file count and total size for the files processed.
+
+The *entry* lines for directories show the cumulative size of all the files
+indexed under the directory. These cumulative sizes are not inlcuded
+in the summary statistics because they would cause double-counting.
+
+The *Scanned* line shows all of the files considered (which does not
+include those files rejected by **--exclude** or **--regular-only**).
+
+The *Indexed* line shows all of the files that pass the *prefilter* stage
+and get loaded into the index. The *Unmatched* line shows all files
+that did not have a match on the other side, and the *Matching* line
+shows the files that did have a match. The *Output* line shows all of
+the files that passed the *postfilter* stage and were printed to the
+output (or would be if **--summary** is specified).
+
+    | Run end time: 2017-02-10T02:58:56Z
+    | Elapsed time: 732.146µs
+    |
+    | STATISTICS:  L:Count  L:Size  R:Count  R:Size
+    |    Scanned:       26  241927       21  177969
+    |    Indexed:       26  241927       21  177969
+    |  Unmatched:        7   92064        2   45056
+    |   Matching:       19  149863       19  132913
+    |     Output:       26  241927       21  177969
+
+## Interactive Status Output
+
+While scanning the file system, File Sifter can print temporary interactive
+messages that show the current status of the scan. This includes the
+initial scan phase, as well as any required digest scan phases. This
+output can be suppressed with the **--quiet** option.
+
 ## Character Encodings
 
 All characters are processed assuming UTF-8 encoding. File names with
@@ -537,11 +582,21 @@ but comparisons and analysis might have problems.  Note that in some cases,
 file systems can be mounted with options that automatically translate
 characters which cannot be converted to Unicode to "safe" substitute sequences.
 
-## Summary Statistics
-
 ## Platform Specific Differences
 
-## Interactive Status Output
+On all platforms, path separators are internally represented and output as
+"**/**", regardless of what the OS uses.
+
+On all platforms, FSIFT files always use \*NIX-style line endings.
+
+On Windows, the following columns do not currently get populated with meaningful
+values: *uid*, *user*, *gid*, *group*, *nlinks* and *device*.
+
+On windows, the *modestr* column contains a simplified approximation of permissions.
+
+On Windows, the program is not currently able to detect the console width and
+assumes a fixed value of *80*. This may affect the appearance of interactive
+status messages.
 
 # HISTORY
 
