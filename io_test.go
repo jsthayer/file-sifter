@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -186,7 +187,11 @@ func Test_Context_processFile(t *testing.T) {
 	got, gotSize = ctx.processFile("", dirPath)
 	for _, col := range cols {
 		_, notNull := got[col]
-		checkVal(t, true, notNull)
+		want := true
+		if runtime.GOOS == "windows" && (col == ColUid || col == ColGid) {
+			want = false
+		}
+		checkVal(t, want, notNull)
 	}
 	checkVal(t, int64(0), got[ColSize])
 	checkVal(t, int64(0), gotSize)
@@ -209,7 +214,11 @@ func Test_Context_processFile(t *testing.T) {
 	got, gotSize = ctx.processFile("", f1.Name())
 	for _, col := range cols {
 		_, notNull := got[col]
-		checkVal(t, true, notNull)
+		want := true
+		if runtime.GOOS == "windows" && (col == ColUid || col == ColGid) {
+			want = false
+		}
+		checkVal(t, want, notNull)
 	}
 	checkVal(t, int64(3), got[ColSize])
 	checkVal(t, int64(3), gotSize)

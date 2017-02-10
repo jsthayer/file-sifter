@@ -1,3 +1,6 @@
+// +build !windows
+// +build !plan9
+
 /*
 	Copyright (C) 2017  John Thayer
 
@@ -15,9 +18,6 @@
 	with this program; if not, write to the Free Software Foundation, Inc.,
 	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-
-// +build !windows
-// +build !plan9
 
 package sifter
 
@@ -39,6 +39,7 @@ func statExtended(info os.FileInfo) statEx {
 	xinfo.nlinks = sysInf.Nlink
 	xinfo.uid = sysInf.Uid
 	xinfo.gid = sysInf.Gid
+	xinfo.uidGidValid = true
 	return xinfo
 }
 

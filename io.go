@@ -31,6 +31,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -226,9 +227,31 @@ func (self *Context) processFile(root, relPath string) (fileEntry, int64) {
 		case ColNlinks:
 			entry.setNumericField(col, int64(xinfo.nlinks))
 		case ColUid:
-			entry.setNumericField(col, int64(xinfo.uid))
+			if xinfo.uidGidValid {
+				entry.setNumericField(col, int64(xinfo.uid))
+			}
 		case ColGid:
-			entry.setNumericField(col, int64(xinfo.gid))
+			if xinfo.uidGidValid {
+				entry.setNumericField(col, int64(xinfo.gid))
+			}
+		case ColUser:
+			if xinfo.uidGidValid {
+				user, err := user.LookupId(fmt.Sprintf("%v", xinfo.uid))
+				if err == nil {
+					entry.setStringField(col, user.Username)
+				} else {
+					self.onError("Could not get user name for UID ", xinfo.uid, " :", err)
+				}
+			}
+		case ColGroup:
+			if xinfo.uidGidValid {
+				group, err := user.LookupGroupId(fmt.Sprintf("%v", xinfo.gid))
+				if err == nil {
+					entry.setStringField(col, group.Name)
+				} else {
+					self.onError("Could not get group name for GID ", xinfo.gid, " :", err)
+				}
+			}
 		case ColModestr:
 			entry.setStringField(col, finfo.Mode().String())
 		case ColFileType:
@@ -330,10 +353,11 @@ DirLoop:
 
 // Extra file info not returned by standard Stat or Lstat
 type statEx struct {
-	device uint64
-	nlinks uint64
-	uid    uint32
-	gid    uint32
+	device      uint64 // device ID that file resides on
+	nlinks      uint64 // number of hard links
+	uid         uint32
+	gid         uint32
+	uidGidValid bool // true if uid and gid are supported on this platform
 }
 
 // Do the appropriate type of stat call depending on whether the the "follow-links"
