@@ -2,7 +2,7 @@
 PACKAGE=github.com/jsthayer/file-sifter
 CLI_PACKAGE=github.com/jsthayer/file-sifter/fsift
 
-VERSION=`git describe`
+VERSION=`git describe --tags`
 BUILD_DATE=`date +%F`
 LDFLAGS=-ldflags "-w -s -X main.Version=${VERSION} -X main.BuildDate=${BUILD_DATE}"
 
