@@ -41,6 +41,7 @@ var (
 	Version   string // filled in at link time (see Makefile)
 	BuildDate string // filled in at link time
 	Copyright = "Copyright 2017  John Thayer"
+	Url       = "https://github.com/jsthayer/file-sifter"
 )
 
 // Factory function to create an option handler that parses columns.
@@ -74,6 +75,9 @@ func excludeAction(arg string) error {
 func showVersionAndExit() {
 	fmt.Println()
 	fmt.Printf("%s -- Version %s -- Build date: %s\n", ProgName, Version, BuildDate)
+	fmt.Println()
+	fmt.Println(Url)
+	fmt.Println()
 	fmt.Println(Copyright)
 	fmt.Println("License GPLv2+: GNU GPL version 2 or later.")
 	fmt.Println("This is free software: you are free to change and redistribute it.")
