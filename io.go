@@ -184,9 +184,10 @@ func myJoin(paths ...string) string {
 // Look at a file in the file system under "root/relPath", and create a new
 // file entry object with the relevant info. Also returns the size of the file
 // (which is zero for nonregular files).  Returns nil if the file info can't be
-// accessed or if it was rejected by the prefilter.  The entry is also added to
-// the current context if not filtered.
-func (self *Context) processFile(root, relPath string) (fileEntry, int64) {
+// accessed or if it was rejected by the prefilter.  If pruneCheck is false, the
+// entry is also added to the current context and stats are updated if not
+// filtered.
+func (self *Context) processFile(root, relPath string, pruneCheck bool) (fileEntry, int64) {
 	// create entry, compute paths, and get stat info
 	entry := newFileEntry()
 	relPath = path.Clean(relPath)
@@ -259,17 +260,21 @@ func (self *Context) processFile(root, relPath string) (fileEntry, int64) {
 		}
 	}
 	// update the "scan" stats and the interactive progress message
-	self.scanStats.update(self.CurSide, size)
-	allBytes := self.scanStats.leftSize + self.scanStats.rightSize
-	allFiles := self.scanStats.leftCount + self.scanStats.rightCount
-	self.outTempf(0, "Scan(%dMB in %d) %s", allBytes/1000000, allFiles, filePath)
+	if !pruneCheck {
+		self.scanStats.update(self.CurSide, size)
+		allBytes := self.scanStats.leftSize + self.scanStats.rightSize
+		allFiles := self.scanStats.leftCount + self.scanStats.rightCount
+		self.outTempf(0, "Scan(%dMB in %d) %s", allBytes/1000000, allFiles, filePath)
+	}
 
 	// apply any prefilters; if not filtered, update index stats and add entry to context
-	match, notNull := self.preFilter.filter(entry)
+	match, notNull := self.preFilter.filterPC(entry, pruneCheck)
 	self.checkNullCompare(notNull)
 	if match {
-		self.indexStats.update(self.CurSide, size)
-		self.entries = append(self.entries, entry)
+		if !pruneCheck {
+			self.indexStats.update(self.CurSide, size)
+			self.entries = append(self.entries, entry)
+		}
 		return entry, size
 	} else {
 		return nil, 0
@@ -330,20 +335,23 @@ DirLoop:
 					continue DirLoop
 				}
 			}
-			// recursively scan the subdirectory
-			dirInfos = append(dirInfos, fi)
-			s := self.scanDirTree(root, newRelPath, dirInfos)
-			dirInfos = dirInfos[:len(dirInfos)-1]
-			size += s
+			entry, _ := self.processFile(root, newRelPath, true)
+			// recursively scan the subdirectory unless pruned by prefilter
+			if entry != nil {
+				dirInfos = append(dirInfos, fi)
+				s := self.scanDirTree(root, newRelPath, dirInfos)
+				dirInfos = dirInfos[:len(dirInfos)-1]
+				size += s
+			}
 		} else if !self.RegularOnly || fi.Mode().IsRegular() {
 			// other type of file; add it to the context
-			_, s := self.processFile(root, newRelPath)
+			_, s := self.processFile(root, newRelPath, false)
 			size += s
 		}
 	}
 	if !self.RegularOnly {
 		// add an entry for this directory to the context
-		entry, _ := self.processFile(root, relPath)
+		entry, _ := self.processFile(root, relPath, false)
 		if entry != nil {
 			entry.setNumericField(ColSize, size)
 		}
@@ -474,7 +482,7 @@ func (self *Context) processRoot(path string) {
 		} else {
 			// not a FSIFT file; just add an entry for it
 			base := len(self.entries)
-			self.processFile(path, "")
+			self.processFile(path, "", false)
 			self.calcDigestList("", self.entries[base:])
 		}
 	} else {

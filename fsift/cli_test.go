@@ -227,6 +227,38 @@ var symlink2 = `| File Sifter output file - V1 |
 |    Indexed:      6     8
 |     Output:      6     8`
 
+var prefilter1 = `| File Sifter output file - V1 |
+|
+| Compare keys: path,size,mtime,modestr
+| Evaluated columns: path,size,mtime,modestr
+|
+| Columns: modestr,size,mtime,path
+|
+  -rw-rw-r--  1  2016-11-24T15:06:42Z  x/a
+  -rw-rw-r--  3  2016-11-24T15:06:43Z  x/c
+  drwxr-xr-x  4  2016-11-24T15:06:41Z  x/
+|
+| STATISTICS:  Count  Size
+|    Scanned:      8     9
+|    Indexed:      3     4
+|     Output:      3     4`
+
+var prunefilter1 = `| File Sifter output file - V1 |
+|
+| Compare keys: path,size,mtime,modestr
+| Evaluated columns: path,size,mtime,modestr
+|
+| Columns: modestr,size,mtime,path
+|
+  -rw-rw-r--  1  2016-11-24T15:06:42Z  x/a
+  -rw-rw-r--  3  2016-11-24T15:06:43Z  x/c
+  drwxr-xr-x  4  2016-11-24T15:06:41Z  x/
+|
+| STATISTICS:  Count  Size
+|    Scanned:      4     4
+|    Indexed:      3     4
+|     Output:      3     4`
+
 var postfilter1 = `| File Sifter output file - V1 |
 |
 | Compare keys: path,size,mtime,modestr
@@ -382,6 +414,14 @@ var tests = []test{
 	{
 		// check with symlink, while following links
 		"NOWIN symlink2", []string{"$T/2", "-sp", "-L", "-cosLp"}, false, symlink2, 0,
+	},
+	{
+		// check a prefilter expression
+		"prefilter", []string{"$T/1", "-ep*=x/**"}, true, prefilter1, 0,
+	},
+	{
+		// check a pruning prefilter expression
+		"prunefilter", []string{"$T/1", "-e/p*=x/**"}, true, prunefilter1, 0,
 	},
 	{
 		// check a postfilter expression
@@ -586,8 +626,8 @@ func Test_main(t *testing.T) {
 		return
 	}
 
-	//	out := ""
-	//	eOut := ""
+	out := ""
+	eOut := ""
 	for _, test := range tests {
 		// Skip tests that won't work on windows
 		if runtime.GOOS == "windows" && strings.HasPrefix(test.name, "NOWIN") {
@@ -609,8 +649,12 @@ func Test_main(t *testing.T) {
 		// run the scan and verify the output
 		rc := run(args)
 		checkVal(t, test.wantRc, rc)
-		//		out = output.String()
-		//		eOut = errOut.String()
+		out = output.String()
+		eOut = errOut.String()
+		_ = out
+		_ = eOut
+		// fmt.Println("@@@\n", out)
+		// fmt.Println("!!!\n", eOut)
 		if test.wantOut != "" {
 			got := newAnalyzer(t, &output)
 			want := newAnalyzer(t, strings.NewReader(strings.Trim(test.wantOut, "\n")))
@@ -621,6 +665,4 @@ func Test_main(t *testing.T) {
 			want.check(t, got)
 		}
 	}
-	//	fmt.Println("@@@\n", out)
-	//	fmt.Println("!!!\n", eOut)
 }

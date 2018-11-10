@@ -786,6 +786,33 @@ Also note that files directly under the root will not have a
 "\f[B]/\f[]" preceding them.
 If this creates problems with glob matching entire paths, a regular
 expression pattern may be a more flexible alternative.
+.SS Pruning Filters
+.PP
+If an entire filter specification is prefixed with a "\f[B]/\f[]"
+character, that filter becomes a \f[I]pruning\f[] filter.
+This only affects the \f[B]\-\-prefilter\f[] option, and then only when
+scanning file systems (not loading FSIFT files).
+The combining filters \f[B]and\f[] and \f[B]or\f[] cannot be prefixed in
+this way.
+.PP
+When a pruning filter is used, if the filter rejects a directory, then
+File Sifter will not descend into that directory to scan its contents.
+(By default, directories are scanned even when rejected by a prefilter
+because prefilters are often looking for certain files without regard to
+the properties of their parent directories.)
+.PP
+Example: only look in the "data" subdirectory, skipping any other
+directories below the current root:
+.PP
+\f[B]fsift . \-\-prefilter \[aq]/path*=data/**\[aq]\f[]
+.PP
+By contrast, the non\-pruning version of the same filter would scan any
+other subdirectories below the current root, but not load any of those
+files into the index, and it could possibly take substantially more
+time.
+It should output the same entries, but with different statistics info:
+.PP
+\f[B]fsift . \-\-prefilter \[aq]path*=data/**\[aq]\f[]
 .SH OTHER FEATURES
 .SS FSIFT Files
 .PP

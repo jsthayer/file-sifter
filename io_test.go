@@ -159,7 +159,7 @@ func Test_Context_processFile(t *testing.T) {
 	ctx := NewContext()
 	ctx.CurSide = true
 	// nonexistent file
-	got, gotSize := ctx.processFile("", "noexist-9161ffff-b5ed-41f8-8205-5aa6f9e6e05a")
+	got, gotSize := ctx.processFile("", "noexist-9161ffff-b5ed-41f8-8205-5aa6f9e6e05a", false)
 	checkVal(t, fileEntry(nil), got)
 	checkVal(t, int64(0), gotSize)
 	if !strings.HasPrefix(ctx.errorMessages[0], "Error: Can't get info about file: ") {
@@ -184,7 +184,7 @@ func Test_Context_processFile(t *testing.T) {
 		return
 	}
 	defer func() { os.Remove(dirPath) }()
-	got, gotSize = ctx.processFile("", dirPath)
+	got, gotSize = ctx.processFile("", dirPath, false)
 	for _, col := range cols {
 		_, notNull := got[col]
 		want := true
@@ -211,7 +211,7 @@ func Test_Context_processFile(t *testing.T) {
 		return
 	}
 	f1.Close()
-	got, gotSize = ctx.processFile("", f1.Name())
+	got, gotSize = ctx.processFile("", f1.Name(), false)
 	for _, col := range cols {
 		_, notNull := got[col]
 		want := true
@@ -237,7 +237,7 @@ func Test_Context_processFile(t *testing.T) {
 		return
 	}
 	f2.Close()
-	got, gotSize = ctx.processFile("", f2.Name())
+	got, gotSize = ctx.processFile("", f2.Name(), false)
 	checkVal(t, fileEntry(nil), got)
 	checkVal(t, int64(0), gotSize)
 

@@ -48,6 +48,7 @@ type Filter struct {
 	left   *Filter        // left child filter
 	right  *Filter        // right child filter
 	regex  *regexp.Regexp // for glob or regex filters, the pattern
+	prune  bool           // true if prefilter should prune recursion into FS directory
 }
 
 // Pattern to parse glob expressions for conversion to regular expressions.
@@ -91,7 +92,7 @@ func GlobToRegex(pat string) (*regexp.Regexp, error) {
 }
 
 // Pattern to parse filter arguments (<fieldname> <op> <value>)
-var filterArgPat = regexp.MustCompile(`\s*(\w+)\s*(!?~=|!?\*=|>=|<=|>|<|!?=|!?\.isnull)(.*)`)
+var filterArgPat = regexp.MustCompile(`\s*(/)?\s*(\w+)\s*(!?~=|!?\*=|>=|<=|>|<|!?=|!?\.isnull)(.*)`)
 
 // ParseFilter parses a filter specification from a command line argument and
 // returns a new filter object implementing it, or an error if it couldn't be
@@ -111,29 +112,34 @@ func ParseFilter(arg string) (*Filter, error) {
 		return nil, fmt.Errorf("Bad filter argument: '%s'", arg)
 	}
 
-	col, ok := colIndex[parts[1]]
+	prune := parts[1] == "/"
+	colName := parts[2]
+	opName := parts[3]
+	data := parts[4]
+
+	col, ok := colIndex[colName]
 	if !ok {
-		return nil, fmt.Errorf("Bad column name in filter: '%s'", parts[1])
+		return nil, fmt.Errorf("Bad column name in filter: '%s'", colName)
 	}
 
 	var op filtOp
 	var regex *regexp.Regexp
 	var err error
-	not := strings.HasPrefix(parts[2], "!") // invert sense of filter
+	not := strings.HasPrefix(opName, "!") // invert sense of filter
 
 	// take action based on filter op
-	switch parts[2] {
+	switch opName {
 	case "!~=", "~=":
 		// a regular expression filter
 		op = opRegex
-		regex, err = regexp.Compile(parts[3])
+		regex, err = regexp.Compile(data)
 		if err != nil {
 			return nil, err
 		}
 	case "!*=", "*=":
 		// a glob expression filter
 		op = opGlob
-		regex, err = GlobToRegex(parts[3])
+		regex, err = GlobToRegex(data)
 		if err != nil {
 			return nil, err
 		}
@@ -155,12 +161,12 @@ func ParseFilter(arg string) (*Filter, error) {
 		panic("Unexpected filter op") // shouldn't be possible due to regex match
 	}
 
-	var value interface{} = parts[3]
+	var value interface{} = data
 	if col.isNumeric() {
 		// if numeric comparison, convert the value to a number
 		switch op {
 		case opEq, opLess, opLessEq:
-			ival, err := strconv.ParseInt(parts[3], 10, 64)
+			ival, err := strconv.ParseInt(data, 10, 64)
 			if err != nil {
 				return nil, err
 			}
@@ -175,6 +181,7 @@ func ParseFilter(arg string) (*Filter, error) {
 		column: col,
 		not:    not,
 		regex:  regex,
+		prune:  prune,
 	}
 	return &filt, nil
 }
@@ -215,11 +222,15 @@ func compileFilter(args []*Filter) (*Filter, error) {
 	return args[0], nil
 }
 
+func (self *Filter) filter(entry fileEntry) (bool, bool) {
+	return self.filterPC(entry, false)
+}
+
 // Perform the filtering operation specified in this object on the given file
 // entry. Return (true, true) if the filter passes, (false, true) if it's
 // rejected. If the operation involved comparing a null value, both returned
 // booleans will be false.
-func (self *Filter) filter(entry fileEntry) (bool, bool) {
+func (self *Filter) filterPC(entry fileEntry, pruneCheck bool) (bool, bool) {
 	if self == nil {
 		// filter is nil if none were specified; pass by default
 		return true, true
@@ -239,6 +250,11 @@ func (self *Filter) filter(entry fileEntry) (bool, bool) {
 			return match && ok, ok
 		}
 		return self.right.filter(entry)
+	}
+
+	// If this is not a pruning filter, ignore during prune check operation
+	if !self.prune && pruneCheck {
+		return true, true
 	}
 
 	diff := 0  // result of comparison +/0/-
