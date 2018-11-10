@@ -534,7 +534,10 @@ If an entire filter specification is prefixed with a "__/__"
 character, that filter becomes a *pruning* filter. This only affects the
 **--prefilter** option, and then only when scanning file systems (not loading
 FSIFT files). The combining filters **and** and **or** cannot be prefixed
-in this way.
+in this way. A pruning filter is only checked against directories right
+before deciding whether to decend into them. Normal prefilters do not
+affect this decision, and pruning filters do not otherwise affect the normal
+prefilter mechanism.
 
 When a pruning filter is used, if the filter rejects a directory,
 then File Sifter will not descend into that directory to scan its contents. (By
@@ -542,17 +545,17 @@ default, directories are scanned even when rejected by a prefilter because
 prefilters are often looking for certain files without regard to the properties
 of their parent directories.)
 
-Example: only look in the "data" subdirectory, skipping any other directories
+Example: look for C header files only in the "data" subdirectory, skipping any other directories
 below the current root:
 
-**fsift . --prefilter '/path\*=data/\*\*'**
+**fsift . --prefilter '/path\*=data/\*\*' -b '\*.h'**
 
 By contrast, the non-pruning version of the same filter would scan any other
 subdirectories below the current root, but not load any of those files into the
 index, and it could possibly take substantially more time. It should output the
 same entries, but with different statistics info:
 
-**fsift . --prefilter 'path\*=data/\*\*'**
+**fsift . --prefilter 'path\*=data/\*\*' -b '\*.h'**
 
 # OTHER FEATURES
 

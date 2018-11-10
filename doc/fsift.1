@@ -794,6 +794,10 @@ This only affects the \f[B]\-\-prefilter\f[] option, and then only when
 scanning file systems (not loading FSIFT files).
 The combining filters \f[B]and\f[] and \f[B]or\f[] cannot be prefixed in
 this way.
+A pruning filter is only checked against directories right before
+deciding whether to decend into them.
+Normal prefilters do not affect this decision, and pruning filters do
+not otherwise affect the normal prefilter mechanism.
 .PP
 When a pruning filter is used, if the filter rejects a directory, then
 File Sifter will not descend into that directory to scan its contents.
@@ -801,10 +805,11 @@ File Sifter will not descend into that directory to scan its contents.
 because prefilters are often looking for certain files without regard to
 the properties of their parent directories.)
 .PP
-Example: only look in the "data" subdirectory, skipping any other
-directories below the current root:
+Example: look for C header files only in the "data" subdirectory,
+skipping any other directories below the current root:
 .PP
-\f[B]fsift . \-\-prefilter \[aq]/path*=data/**\[aq]\f[]
+\f[B]fsift . \-\-prefilter \[aq]/path*=data/**\[aq] \-b
+\[aq]*.h\[aq]\f[]
 .PP
 By contrast, the non\-pruning version of the same filter would scan any
 other subdirectories below the current root, but not load any of those
@@ -812,7 +817,7 @@ files into the index, and it could possibly take substantially more
 time.
 It should output the same entries, but with different statistics info:
 .PP
-\f[B]fsift . \-\-prefilter \[aq]path*=data/**\[aq]\f[]
+\f[B]fsift . \-\-prefilter \[aq]path*=data/**\[aq] \-b \[aq]*.h\[aq]\f[]
 .SH OTHER FEATURES
 .SS FSIFT Files
 .PP

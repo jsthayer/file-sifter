@@ -253,11 +253,12 @@ var prunefilter1 = `| File Sifter output file - V1 |
   -rw-rw-r--  1  2016-11-24T15:06:42Z  x/a
   -rw-rw-r--  3  2016-11-24T15:06:43Z  x/c
   drwxr-xr-x  4  2016-11-24T15:06:41Z  x/
+  drwxr-xr-x  4  2016-11-24T15:06:40Z  ./
 |
 | STATISTICS:  Count  Size
 |    Scanned:      4     4
-|    Indexed:      3     4
-|     Output:      3     4`
+|    Indexed:      4     4
+|     Output:      4     4`
 
 var postfilter1 = `| File Sifter output file - V1 |
 |

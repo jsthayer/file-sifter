@@ -428,12 +428,12 @@
 <p>As a special case, a <strong>**</strong> matches any number of characters, <em>including</em> &quot;<strong>/</strong>&quot;. This can be used to match entire segments of file paths. For example, the filter: <strong>path*=**/.config/**</strong> will select all files under <em>.config</em> directories below the top level.</p>
 <p>When using the <strong>**</strong> operator, note that directory paths are always stored with a trailing &quot;<strong>/</strong>&quot; character. Also note that files directly under the root will not have a &quot;<strong>/</strong>&quot; preceding them. If this creates problems with glob matching entire paths, a regular expression pattern may be a more flexible alternative.</p>
 <h2 id="pruning-filters">Pruning Filters</h2>
-<p>If an entire filter specification is prefixed with a &quot;<strong>/</strong>&quot; character, that filter becomes a <em>pruning</em> filter. This only affects the <strong>--prefilter</strong> option, and then only when scanning file systems (not loading FSIFT files). The combining filters <strong>and</strong> and <strong>or</strong> cannot be prefixed in this way.</p>
+<p>If an entire filter specification is prefixed with a &quot;<strong>/</strong>&quot; character, that filter becomes a <em>pruning</em> filter. This only affects the <strong>--prefilter</strong> option, and then only when scanning file systems (not loading FSIFT files). The combining filters <strong>and</strong> and <strong>or</strong> cannot be prefixed in this way. A pruning filter is only checked against directories right before deciding whether to decend into them. Normal prefilters do not affect this decision, and pruning filters do not otherwise affect the normal prefilter mechanism.</p>
 <p>When a pruning filter is used, if the filter rejects a directory, then File Sifter will not descend into that directory to scan its contents. (By default, directories are scanned even when rejected by a prefilter because prefilters are often looking for certain files without regard to the properties of their parent directories.)</p>
-<p>Example: only look in the &quot;data&quot; subdirectory, skipping any other directories below the current root:</p>
-<p><strong>fsift . --prefilter '/path*=data/**'</strong></p>
+<p>Example: look for C header files only in the &quot;data&quot; subdirectory, skipping any other directories below the current root:</p>
+<p><strong>fsift . --prefilter '/path*=data/**' -b '*.h'</strong></p>
 <p>By contrast, the non-pruning version of the same filter would scan any other subdirectories below the current root, but not load any of those files into the index, and it could possibly take substantially more time. It should output the same entries, but with different statistics info:</p>
-<p><strong>fsift . --prefilter 'path*=data/**'</strong></p>
+<p><strong>fsift . --prefilter 'path*=data/**' -b '*.h'</strong></p>
 <h1 id="other-features">OTHER FEATURES</h1>
 <h2 id="fsift-files">FSIFT Files</h2>
 <p>The output of File Sifter may be saved to a file (an extension of <strong>.FSIFT</strong> is recommended). If this file is later specified as a root during another run of File Sifter, then by default entries will parsed and loaded from that file.</p>

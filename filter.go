@@ -239,21 +239,21 @@ func (self *Filter) filterPC(entry fileEntry, pruneCheck bool) (bool, bool) {
 	// AND/OR filters evaluate children
 	switch self.op {
 	case opAnd:
-		match, ok := self.left.filter(entry)
+		match, ok := self.left.filterPC(entry, pruneCheck)
 		if !match || !ok {
 			return match && ok, ok
 		}
-		return self.right.filter(entry)
+		return self.right.filterPC(entry, pruneCheck)
 	case opOr:
-		match, ok := self.left.filter(entry)
+		match, ok := self.left.filterPC(entry, pruneCheck)
 		if match || !ok {
 			return match && ok, ok
 		}
-		return self.right.filter(entry)
+		return self.right.filterPC(entry, pruneCheck)
 	}
 
 	// If this is not a pruning filter, ignore during prune check operation
-	if !self.prune && pruneCheck {
+	if self.prune != pruneCheck {
 		return true, true
 	}
 
