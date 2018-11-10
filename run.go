@@ -48,38 +48,40 @@ type ColSelector struct {
 // the file sifter program.
 type Context struct {
 	// The following fields are set by the command line program before starting
-	OutCols        ColSelector       // columns to show in output
-	SortCols       ColSelector       // columns to sort by, in order of precedence
-	KeyCols        ColSelector       // columns to use for compare key
-	PreFilterArgs  []*Filter         // filter objects as parsed from command line --prefilter args
-	PostFilterArgs []*Filter         // filter objects as parsed from command line --postfilter args
-	Roots          map[bool][]string // lists of root paths, [false] = left side, [true] = right side
-	CurSide        bool              // current side to add roots to (true after ":" command line arg)
-	Verbosity      int               // verbosity level, default=0
-	SummaryOnly    bool              // true to suppress file entry output
-	GroupNumerics  bool              // true to group numbers with commas, like 1,234
-	Plain          bool              // true to suppress header and footer output
-	Plain0         bool              // like Plain, but also use '0x00' to separate fields
-	FollowLinks    bool              // true to follow/use targets of symbolic links
-	RegularOnly    bool              // true to only index regular files
-	AddMd5         bool              // true to add digest columns to output and compare key...
-	AddSha1        bool              // "
-	AddSha256      bool              // "
-	AddSha512      bool              // "
-	JsonOut        bool              // true to output data in JSON format
-	MembershipFilt string            // add a postfilter based on membership codes [lrLR]
-	IgnoreNullCmps bool              // suppress warnings about null comparisons
-	Excludes       []*regexp.Regexp  // pattern to exclude files, dir trees by path match
-	OutputPath     string            // output file, if any (default=stdout)
-	NoDetect       bool              // true to suppress autodetect of FSIFT files for roots
-	XDev           bool              // true to prevent descending into directories on different file systems
-	Verify         bool              // true to check that all files on left are matched on right
-	OutputTimezone *time.Location    // if set, translate output dates to given timezone
+	OutCols         ColSelector       // columns to show in output
+	SortCols        ColSelector       // columns to sort by, in order of precedence
+	KeyCols         ColSelector       // columns to use for compare key
+	PreFilterArgs   []*Filter         // filter objects as parsed from command line --prefilter args
+	PostFilterArgs  []*Filter         // filter objects as parsed from command line --postfilter args
+	PruneFilterArgs []*Filter         // filter objects as parsed from command line --prunefilter args
+	Roots           map[bool][]string // lists of root paths, [false] = left side, [true] = right side
+	CurSide         bool              // current side to add roots to (true after ":" command line arg)
+	Verbosity       int               // verbosity level, default=0
+	SummaryOnly     bool              // true to suppress file entry output
+	GroupNumerics   bool              // true to group numbers with commas, like 1,234
+	Plain           bool              // true to suppress header and footer output
+	Plain0          bool              // like Plain, but also use '0x00' to separate fields
+	FollowLinks     bool              // true to follow/use targets of symbolic links
+	RegularOnly     bool              // true to only index regular files
+	AddMd5          bool              // true to add digest columns to output and compare key...
+	AddSha1         bool              // "
+	AddSha256       bool              // "
+	AddSha512       bool              // "
+	JsonOut         bool              // true to output data in JSON format
+	MembershipFilt  string            // add a postfilter based on membership codes [lrLR]
+	IgnoreNullCmps  bool              // suppress warnings about null comparisons
+	Excludes        []*regexp.Regexp  // pattern to exclude files, dir trees by path match
+	OutputPath      string            // output file, if any (default=stdout)
+	NoDetect        bool              // true to suppress autodetect of FSIFT files for roots
+	XDev            bool              // true to prevent descending into directories on different file systems
+	Verify          bool              // true to check that all files on left are matched on right
+	OutputTimezone  *time.Location    // if set, translate output dates to given timezone
 
 	// Internal fields
 	entries         []fileEntry     // all of the loaded file entries
 	preFilter       *Filter         // the compiled prefilter tree, if any
 	postFilter      *Filter         // the compiled postfilter tree, if any
+	pruneFilter     *Filter         // the compiled prunefilter tree, if any
 	neededCols      map[Column]bool // set of all columns relevant to this run
 	curFileCount    int64           // files/bytes read so far while calculating digest(s)
 	curByteCount    int64           // "
@@ -305,6 +307,10 @@ func (self *Context) adjustCmdlineOptions() {
 	self.preFilter, err = compileFilter(self.PreFilterArgs)
 	if err != nil {
 		self.fatal("Error compiling pre filter args:", err)
+	}
+	self.pruneFilter, err = compileFilter(self.PruneFilterArgs)
+	if err != nil {
+		self.fatal("Error compiling prune filter args:", err)
 	}
 
 	// reset current side flag in preparation for run

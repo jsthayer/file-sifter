@@ -143,6 +143,7 @@ func parseArgs(args []string) error {
 		Option("1 sha1        ", &ctx.AddSha1, "Add sha1 column to compare key and output").
 		Section("Pre-analysis filtering:").
 		Option("e prefilter   ", filterOption(&ctx.PreFilterArgs), "=FILTER-EXP; Filter files before indexing").
+		Option("P prunefilter ", filterOption(&ctx.PruneFilterArgs), "=FILTER-EXP; Filter directories before descending").
 		Option("b base-match  ", baseAction, "=GLOB-PAT; Shortcut for --prefilter 'base*=*GLOB-PAT*'").
 		Option("x exclude     ", excludeAction, "=GLOB-PAT; Exclude file system files and/or dir trees by path glob").
 		Option("R regular-only", &ctx.RegularOnly, "Only consider regular files while scanning file system").

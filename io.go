@@ -259,22 +259,26 @@ func (self *Context) processFile(root, relPath string, pruneCheck bool) (fileEnt
 			entry.setStringField(col, modeStrToFileType(finfo.Mode().String()))
 		}
 	}
-	// update the "scan" stats and the interactive progress message
+	match := false
+	notNull := false
 	if !pruneCheck {
+		// update the "scan" stats and the interactive progress message
 		self.scanStats.update(self.CurSide, size)
 		allBytes := self.scanStats.leftSize + self.scanStats.rightSize
 		allFiles := self.scanStats.leftCount + self.scanStats.rightCount
 		self.outTempf(0, "Scan(%dMB in %d) %s", allBytes/1000000, allFiles, filePath)
-	}
 
-	// apply any prefilters; if not filtered, update index stats and add entry to context
-	match, notNull := self.preFilter.filterPC(entry, pruneCheck)
-	self.checkNullCompare(notNull)
-	if match {
-		if !pruneCheck {
+		// apply any prefilters; if not filtered, update index stats and add entry to context
+		match, notNull = self.preFilter.filter(entry)
+		if match {
 			self.indexStats.update(self.CurSide, size)
 			self.entries = append(self.entries, entry)
 		}
+	} else {
+		match, notNull = self.pruneFilter.filter(entry)
+	}
+	self.checkNullCompare(notNull)
+	if match {
 		return entry, size
 	} else {
 		return nil, 0

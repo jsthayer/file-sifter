@@ -48,7 +48,6 @@ type Filter struct {
 	left   *Filter        // left child filter
 	right  *Filter        // right child filter
 	regex  *regexp.Regexp // for glob or regex filters, the pattern
-	prune  bool           // true if prefilter should prune recursion into FS directory
 }
 
 // Pattern to parse glob expressions for conversion to regular expressions.
@@ -92,7 +91,7 @@ func GlobToRegex(pat string) (*regexp.Regexp, error) {
 }
 
 // Pattern to parse filter arguments (<fieldname> <op> <value>)
-var filterArgPat = regexp.MustCompile(`\s*(/)?\s*(\w+)\s*(!?~=|!?\*=|>=|<=|>|<|!?=|!?\.isnull)(.*)`)
+var filterArgPat = regexp.MustCompile(`\s*(\w+)\s*(!?~=|!?\*=|>=|<=|>|<|!?=|!?\.isnull)(.*)`)
 
 // ParseFilter parses a filter specification from a command line argument and
 // returns a new filter object implementing it, or an error if it couldn't be
@@ -112,10 +111,9 @@ func ParseFilter(arg string) (*Filter, error) {
 		return nil, fmt.Errorf("Bad filter argument: '%s'", arg)
 	}
 
-	prune := parts[1] == "/"
-	colName := parts[2]
-	opName := parts[3]
-	data := parts[4]
+	colName := parts[1]
+	opName := parts[2]
+	data := parts[3]
 
 	col, ok := colIndex[colName]
 	if !ok {
@@ -181,7 +179,6 @@ func ParseFilter(arg string) (*Filter, error) {
 		column: col,
 		not:    not,
 		regex:  regex,
-		prune:  prune,
 	}
 	return &filt, nil
 }
@@ -222,15 +219,11 @@ func compileFilter(args []*Filter) (*Filter, error) {
 	return args[0], nil
 }
 
-func (self *Filter) filter(entry fileEntry) (bool, bool) {
-	return self.filterPC(entry, false)
-}
-
 // Perform the filtering operation specified in this object on the given file
 // entry. Return (true, true) if the filter passes, (false, true) if it's
 // rejected. If the operation involved comparing a null value, both returned
 // booleans will be false.
-func (self *Filter) filterPC(entry fileEntry, pruneCheck bool) (bool, bool) {
+func (self *Filter) filter(entry fileEntry) (bool, bool) {
 	if self == nil {
 		// filter is nil if none were specified; pass by default
 		return true, true
@@ -239,22 +232,17 @@ func (self *Filter) filterPC(entry fileEntry, pruneCheck bool) (bool, bool) {
 	// AND/OR filters evaluate children
 	switch self.op {
 	case opAnd:
-		match, ok := self.left.filterPC(entry, pruneCheck)
+		match, ok := self.left.filter(entry)
 		if !match || !ok {
 			return match && ok, ok
 		}
-		return self.right.filterPC(entry, pruneCheck)
+		return self.right.filter(entry)
 	case opOr:
-		match, ok := self.left.filterPC(entry, pruneCheck)
+		match, ok := self.left.filter(entry)
 		if match || !ok {
 			return match && ok, ok
 		}
-		return self.right.filterPC(entry, pruneCheck)
-	}
-
-	// If this is not a pruning filter, ignore during prune check operation
-	if self.prune != pruneCheck {
-		return true, true
+		return self.right.filter(entry)
 	}
 
 	diff := 0  // result of comparison +/0/-

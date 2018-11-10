@@ -422,7 +422,7 @@ var tests = []test{
 	},
 	{
 		// check a pruning prefilter expression
-		"prunefilter", []string{"$T/1", "-e/p*=x/**"}, true, prunefilter1, 0,
+		"prunefilter", []string{"$T/1", "-Pp*=x/**"}, true, prunefilter1, 0,
 	},
 	{
 		// check a postfilter expression
